@@ -1,10 +1,12 @@
 import logging
 import os
+import subprocess
 import time
 from datetime import datetime
 
 import pytz
 import requests
+from github import Github
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -38,6 +40,31 @@ if not os.path.exists(folder_name):
 file_name = f"{folder_name}/{date_str}_Hour-{time_str}.txt"
 with open(file_name, "w") as file:
     file.write(str(data))
+
+# Git config
+subprocess.run(["git", "config", "--global", "user.name", "github-actions"], check=True)
+subprocess.run(["git", "config", "--global", "user.email", "github-actions@github.com"], check=True)
+
+# Create new branch
+branch_name = f"data-update-{date_str}-{time_str}"
+subprocess.run(["git", "checkout", "-b", branch_name], check=True)
+
+# Stage and commit
+subprocess.run(["git", "add", file_name], check=True)
+subprocess.run(["git", "commit", "-m", f"Add data update for {date_str} Hour {time_str}"], check=True)
+
+# Push to GitHub
+subprocess.run(["git", "push", "--set-upstream", "origin", branch_name], check=True)
+
+# Create PR using PyGithub
+token = os.environ["GITHUB_TOKEN"]
+repo = Github(token).get_repo("AdityaSreevatsaK/100DaysOfCode_Python")
+pr = repo.create_pull(
+    title=f"Data update for {date_str} Hour {time_str}",
+    body="Automated PR from hourly data fetch.",
+    head=branch_name,
+    base="main"
+)
 
 end_time = time.time()
 logging.info(f"Total time taken: {end_time - start_time}")
