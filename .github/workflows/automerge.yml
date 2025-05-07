@@ -22,11 +22,11 @@ jobs:
       - name: Add 'automerge' label
         uses: actions-ecosystem/action-add-labels@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.CityBikeDataRetrievalAgent_GITHUB_TOKEN }}
           labels: automerge
 
       - name: Enable auto-merge
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.CityBikeDataRetrievalAgent_GITHUB_TOKEN }}
           merge-method: squash

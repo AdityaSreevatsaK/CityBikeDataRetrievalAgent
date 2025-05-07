@@ -28,4 +28,4 @@ jobs:
       - name: Run update script
         run: python 'Get CityBike Station Information.py'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CITYBIKEDATARETRIEVALAGENT_GITHUB_TOKEN: ${{ secrets.CityBikeDataRetrievalAgent_GITHUB_TOKEN }}
