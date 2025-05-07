@@ -1,6 +1,8 @@
 name: Dummy Check
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
 
 permissions:
