@@ -45,6 +45,7 @@ with open(file_name, "w") as file:
 subprocess.run(["git", "config", "--global", "user.name", "github-actions"], check=True)
 subprocess.run(["git", "config", "--global", "user.email", "github-actions@github.com"], check=True)
 
+
 # Create new branch
 branch_name = f"data-update-{date_str}-{time_str}"
 subprocess.run(["git", "checkout", "-b", branch_name], check=True)
@@ -52,6 +53,12 @@ subprocess.run(["git", "checkout", "-b", branch_name], check=True)
 # Stage and commit
 subprocess.run(["git", "add", file_name], check=True)
 subprocess.run(["git", "commit", "-m", f"Add data update for {date_str} Hour {time_str}"], check=True)
+
+# Try to rebase from remote branch, ignore if it doesn't exist yet
+try:
+    subprocess.run(["git", "pull", "--rebase", "origin", branch_name], check=True)
+except subprocess.CalledProcessError:
+    pass
 
 # Push to GitHub
 subprocess.run(["git", "push", "--set-upstream", "origin", branch_name], check=True)
