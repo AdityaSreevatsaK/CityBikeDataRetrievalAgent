@@ -58,7 +58,7 @@ subprocess.run(["git", "push", "--set-upstream", "origin", branch_name], check=T
 
 # Create PR using PyGithub
 token = os.environ["CITYBIKEDATARETRIEVALAGENT_GITHUB_TOKEN"]
-repo = Github(token).get_repo("AdityaSreevatsaK/100DaysOfCode_Python")
+repo = Github(token).get_repo("AdityaSreevatsaK/CityBikeDataRetrievalAgent")
 pr = repo.create_pull(
     title=f"Data update for {date_str} Hour {time_str}",
     body="Automated PR from hourly data fetch.",
