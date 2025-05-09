@@ -1,78 +1,67 @@
-import logging
 import os
 import subprocess
-import time
-from datetime import datetime
-
-import pytz
 import requests
+import pytz
+import time
+import logging
+from datetime import datetime
 from github import Github
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
-logging.info("Application started successfully.")
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 start_time = time.time()
-city_bike_station_information = 'https://gbfs.citibikenyc.com/gbfs/en/station_information.json'
-city_bike_station_status = "https://gbfs.citibikenyc.com/gbfs/en/station_status.json"
 
-# Fetch the response
+# 1. Fetch the Citi Bike station status data
+station_status_url = "https://gbfs.citibikenyc.com/gbfs/en/station_status.json"
 try:
-    response = requests.get(city_bike_station_status)
+    response = requests.get(station_status_url)
     response.raise_for_status()
     data = response.json()
-    logging.info(f"Obtained response successfully. {data}")
+    logging.info("Fetched station status data successfully.")
 except requests.exceptions.RequestException as e:
     logging.error(f"Failed to fetch data: {e}")
     data = {}
 
-# Get the current date and time in New York timezone
+# 2. Determine current date and time in New York
 ny_tz = pytz.timezone("America/New_York")
-current_time = datetime.now(ny_tz)
-date_str = current_time.strftime("%d-%m-%Y")
-time_str = current_time.strftime("%H-%M-%S")  # Unified format
+now = datetime.now(ny_tz)
+date_str = now.strftime("%d-%m-%Y")
+time_str = now.strftime("%H-%M-%S")  # e.g. "14-05-30"
+logging.info(f"Current New York time: {date_str} {time_str}")
 
-# Create a folder for the current date if it doesn't exist
+# 3. Create directory for today's date
 folder_name = date_str
 if not os.path.exists(folder_name):
     os.makedirs(folder_name)
 
-# Save the response to a text file
+# 4. Save data to a file named by date and time
 file_name = f"{folder_name}/{date_str}_Hour-{time_str}.txt"
-with open(file_name, "w") as file:
-    file.write(str(data))
+with open(file_name, "w") as f:
+    f.write(str(data))
 
-# Git config
+# 5. Set up Git user config for Actions
 subprocess.run(["git", "config", "--global", "user.name", "github-actions"], check=True)
 subprocess.run(["git", "config", "--global", "user.email", "github-actions@github.com"], check=True)
 
-# Create new branch
+# 6. Create a new branch with a unique timestamp-based name
 branch_name = f"data-update-{date_str}-{time_str}"
 subprocess.run(["git", "checkout", "-b", branch_name], check=True)
 
-# Stage and commit
+# 7. Commit the new data file
 subprocess.run(["git", "add", file_name], check=True)
-subprocess.run(["git", "commit", "-m", f"Add data update for {date_str} Hour {time_str}"], check=True)
+commit_msg = f"Add data update for {date_str} at {time_str}"
+subprocess.run(["git", "commit", "-m", commit_msg], check=True)
 
-# Check if remote branch exists and rebase if necessary
-subprocess.run(["git", "fetch", "origin", branch_name], check=True)
-result = subprocess.run(["git", "ls-remote", "--heads", "origin", branch_name], stdout=subprocess.PIPE, text=True)
-if result.stdout:
-    rebase_result = subprocess.run(["git", "rebase", f"origin/{branch_name}"], check=False)
-    if rebase_result.returncode != 0:
-        subprocess.run(["git", "rebase", "--abort"], check=False)
-
-# Push to GitHub
+# 8. Push branch to GitHub (no fetch/rebase needed)
 subprocess.run(["git", "push", "--set-upstream", "origin", branch_name], check=True)
 
-# Create PR using PyGithub
-token = os.environ["CITYBIKEDATARETRIEVALAGENT_GITHUB_TOKEN"]
+# 9. Create a pull request back to main using PyGithub
+#    Use the GITHUB_TOKEN provided by Actions for authentication:contentReference[oaicite:7]{index=7}.
+token = os.environ["GITHUB_TOKEN"]
 repo = Github(token).get_repo("AdityaSreevatsaK/CityBikeDataRetrievalAgent")
-pr = repo.create_pull(
-    title=f"Data update for {date_str} Hour {time_str}",
-    body="Automated PR from hourly data fetch.",
-    head=branch_name,
-    base="main"
-)
+pr_title = f"Data update for {date_str} at {time_str}"
+pr_body = "Automated hourly data update from CityBike API."
+repo.create_pull(title=pr_title, body=pr_body, head=branch_name, base="main")
 
 end_time = time.time()
-logging.info(f"Total time taken: {end_time - start_time}")
+logging.info(f"Script completed in {end_time - start_time:.2f} seconds.")
