@@ -29,7 +29,7 @@ except requests.exceptions.RequestException as e:
 ny_tz = pytz.timezone("America/New_York")
 current_time = datetime.now(ny_tz)
 date_str = current_time.strftime("%d-%m-%Y")
-time_str = current_time.strftime("%H")
+time_str = current_time.strftime("%H-%M-%S")  # Unified format
 
 # Create a folder for the current date if it doesn't exist
 folder_name = date_str
@@ -45,7 +45,6 @@ with open(file_name, "w") as file:
 subprocess.run(["git", "config", "--global", "user.name", "github-actions"], check=True)
 subprocess.run(["git", "config", "--global", "user.email", "github-actions@github.com"], check=True)
 
-
 # Create new branch
 branch_name = f"data-update-{date_str}-{time_str}"
 subprocess.run(["git", "checkout", "-b", branch_name], check=True)
@@ -54,6 +53,7 @@ subprocess.run(["git", "checkout", "-b", branch_name], check=True)
 subprocess.run(["git", "add", file_name], check=True)
 subprocess.run(["git", "commit", "-m", f"Add data update for {date_str} Hour {time_str}"], check=True)
 
+# Check if remote branch exists and rebase if necessary
 subprocess.run(["git", "fetch", "origin", branch_name], check=True)
 result = subprocess.run(["git", "ls-remote", "--heads", "origin", branch_name], stdout=subprocess.PIPE, text=True)
 if result.stdout:
