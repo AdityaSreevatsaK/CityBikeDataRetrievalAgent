@@ -54,11 +54,12 @@ subprocess.run(["git", "checkout", "-b", branch_name], check=True)
 subprocess.run(["git", "add", file_name], check=True)
 subprocess.run(["git", "commit", "-m", f"Add data update for {date_str} Hour {time_str}"], check=True)
 
-# Try to rebase from remote branch, ignore if it doesn't exist yet
-try:
-    subprocess.run(["git", "pull", "--rebase", "origin", branch_name], check=True)
-except subprocess.CalledProcessError:
-    pass
+subprocess.run(["git", "fetch", "origin", branch_name], check=True)
+result = subprocess.run(["git", "ls-remote", "--heads", "origin", branch_name], stdout=subprocess.PIPE, text=True)
+if result.stdout:
+    rebase_result = subprocess.run(["git", "rebase", f"origin/{branch_name}"], check=False)
+    if rebase_result.returncode != 0:
+        subprocess.run(["git", "rebase", "--abort"], check=False)
 
 # Push to GitHub
 subprocess.run(["git", "push", "--set-upstream", "origin", branch_name], check=True)
