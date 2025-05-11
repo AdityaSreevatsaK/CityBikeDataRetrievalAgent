@@ -19,6 +19,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
 
+      - name: Debug PR data
+        run: |
+          echo "PR Base Branch: ${{ github.event.pull_request.base.ref }}"
+          echo "PR Head Branch: ${{ github.event.pull_request.head.ref }}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+
       - name: Enable auto-merge
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
