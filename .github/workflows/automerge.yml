@@ -4,9 +4,18 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:    # Manual trigger
     inputs:
-      pr_number:
-        description: 'PR number to merge'
+      pr_numbers:
+        description: 'PR numbers to merge (comma-separated, e.g. "1,2,3")'
         required: false
+        default: ''
+      all_open_prs:
+        description: 'Merge all open PRs? (true/false)'
+        required: false
+        default: 'false'
+      branch_filter:
+        description: 'Only merge PRs with head branches containing this string (optional)'
+        required: false
+        default: ''
 permissions:
   contents: write
   pull-requests: write
@@ -17,12 +26,46 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Immediate merge PR
+      - name: Merge PRs
         run: |
-          PR_NUMBER=${{ github.event.pull_request.number || github.event.inputs.pr_number }}
-          echo "Processing PR #$PR_NUMBER"
+          # Handle automatic PR trigger case
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            echo "Merging PR triggered by event: #${{ github.event.pull_request.number }}"
+            gh pr merge ${{ github.event.pull_request.number }} --squash --admin
+            exit 0
+          fi
           
-          # Merge immediately without waiting for checks
-          gh pr merge $PR_NUMBER --squash --admin
+          # Handle manual workflow trigger
+          
+          # Case 1: Merge specific PRs by number
+          if [ -n "${{ github.event.inputs.pr_numbers }}" ]; then
+            IFS=',' read -ra PR_NUMBERS <<< "${{ github.event.inputs.pr_numbers }}"
+            echo "Merging specified PRs: ${{ github.event.inputs.pr_numbers }}"
+            
+            for PR_NUM in "${PR_NUMBERS[@]}"; do
+              PR_NUM=$(echo $PR_NUM | tr -d ' ')
+              echo "Processing PR #$PR_NUM"
+              gh pr merge $PR_NUM --squash --admin || echo "Failed to merge PR #$PR_NUM"
+            done
+          # Case 2: Merge all open PRs
+          elif [ "${{ github.event.inputs.all_open_prs }}" = "true" ]; then
+            echo "Fetching all open PRs..."
+            
+            # Get list of open PRs, filtering if requested
+            if [ -n "${{ github.event.inputs.branch_filter }}" ]; then
+              echo "Filtering by branch containing: ${{ github.event.inputs.branch_filter }}"
+              OPEN_PRS=$(gh pr list --json number,headRefName --jq '.[] | select(.headRefName | contains("${{ github.event.inputs.branch_filter }}")) | .number')
+            else
+              OPEN_PRS=$(gh pr list --json number --jq '.[].number')
+            fi
+            
+            # Process each PR
+            for PR_NUM in $OPEN_PRS; do
+              echo "Processing PR #$PR_NUM"
+              gh pr merge $PR_NUM --squash --admin || echo "Failed to merge PR #$PR_NUM"
+            done
+          else
+            echo "No PR numbers specified and 'all_open_prs' not set to true. Nothing to merge."
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
