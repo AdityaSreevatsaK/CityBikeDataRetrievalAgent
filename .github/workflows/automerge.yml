@@ -1,32 +1,28 @@
 name: Auto-Merge PRs
-
 on:
-  workflow_dispatch:    # Manual trigger
   pull_request:
     types: [opened, reopened, synchronize]
-
+  workflow_dispatch:    # Manual trigger
+    inputs:
+      pr_number:
+        description: 'PR number to merge'
+        required: false
 permissions:
   contents: write
   pull-requests: write
-
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout PR branch
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - name: Debug PR data
+      
+      - name: Immediate merge PR
         run: |
-          echo "PR Base Branch: ${{ github.event.pull_request.base.ref }}"
-          echo "PR Head Branch: ${{ github.event.pull_request.head.ref }}"
-          echo "PR Number: ${{ github.event.pull_request.number }}"
-
-      - name: Enable auto-merge
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          token: ${{ secrets.CITYBIKEDATARETRIEVALAGENT_GITHUB_TOKEN }}
-          merge-method: squash
+          PR_NUMBER=${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+          echo "Processing PR #$PR_NUMBER"
+          
+          # Merge immediately without waiting for checks
+          gh pr merge $PR_NUMBER --squash --admin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
